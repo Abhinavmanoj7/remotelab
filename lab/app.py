@@ -22,7 +22,6 @@ with app.app_context():
         admin_user = User(username='sharon', password='sharon')
         db.session.add(admin_user)
         db.session.commit()
-
 from collections import defaultdict
 
 def distribute_questions(num_people, questions):
