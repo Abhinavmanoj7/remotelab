@@ -12,10 +12,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///exa
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(pathlib.Path.cwd(), 'Uploads')
 
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    if not User.query.filter_by(username='sharon').first():
+        admin_user = User(username='sharon', password='sharon')
+        db.session.add(admin_user)
+        db.session.commit()
 
 from collections import defaultdict
 
