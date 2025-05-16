@@ -1,0 +1,80 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "base.html" %}
+
+{% block title %}Add Questions - {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center">Add Questions for {{ exam.name }}</h1>
+    <p class="text-center">Duration: {{ exam.duration }} hours</p>
+    <hr>
+
+    <form method="POST">
+        <div class="mb-3">
+            <label for="question_number" class="form-label">Question Number</label>
+            <input type="text" class="form-control" id="question_number" name="question_number" required>
+        </div>
+        <div class="mb-3">
+            <label for="question_text" class="form-label">Question Text</label>
+            <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Add Question</button>
+    </form>
+
+    <hr>
+
+    <h4>Existing Questions</h4>
+    <ul class="list-group">
+        {% for question in questions %}
+        <li class="list-group-item">
+            <strong>Q{{ question.question_number }}:</strong> {{ question.question_text }}
+        </li>
+        {% endfor %}
+    </ul>
+
+    <hr>
+
+    <form method="POST" action="{{ url_for('start_exam') }}">
+        <input type="hidden" name="exam_id" value="{{ exam.id }}">
+        <button type="submit" class="btn btn-success">Start Exam</button>
+    </form>
+</div>
+{% endblock %}
